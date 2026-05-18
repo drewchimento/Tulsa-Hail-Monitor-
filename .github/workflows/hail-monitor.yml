@@ -1,0 +1,63 @@
+name: Tulsa Hail Monitor
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: false
+        default: "normal"
+        type: choice
+        options:
+          - normal
+          - dry-run
+          - self-test
+
+permissions:
+  contents: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run monitor
+        env:
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_APP_PASSWORD: ${{ secrets.SMTP_APP_PASSWORD }}
+          ALERT_TO_EMAIL: ${{ secrets.ALERT_TO_EMAIL }}
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "self-test" ]; then
+            python monitor.py --self-test
+          elif [ "${{ github.event.inputs.mode }}" = "dry-run" ]; then
+            python monitor.py --dry-run
+          else
+            python monitor.py
+          fi
+
+      - name: Commit updated state
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seen_alerts.json
+          if git diff --staged --quiet; then
+            echo "No state changes to commit"
+          else
+            git commit -m "chore: update seen_alerts.json [skip ci]"
+            git push
+          fi
