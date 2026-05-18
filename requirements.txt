@@ -1,3 +1,5 @@
+# Runtime deps. CI runs Python 3.11 (see .github/workflows/hail-monitor.yml).
+# Local dev tested on 3.14 but the project targets 3.11 for CI parity.
 requests==2.32.3
 shapely==2.1.2
 python-dotenv==1.0.1
