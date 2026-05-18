@@ -1,0 +1,13 @@
+{
+  "id": "urn:oid:2.49.0.1.840.0.test.nogeom",
+  "type": "Feature",
+  "geometry": null,
+  "properties": {
+    "id": "urn:oid:2.49.0.1.840.0.test.nogeom",
+    "event": "Severe Thunderstorm Warning",
+    "headline": "Severe Thunderstorm Warning for Tulsa County",
+    "description": "Half dollar size hail reported.",
+    "areaDesc": "Tulsa, OK; Wagoner, OK",
+    "expires": "2026-05-18T20:00:00-05:00"
+  }
+}

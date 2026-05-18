@@ -10,6 +10,8 @@ from geo import (
     RADIUS_MILES,
     tulsa_circle,
     alert_polygon_overlaps_tulsa,
+    areadesc_overlaps_tulsa,
+    TULSA_METRO_COUNTIES,
 )
 
 
@@ -102,3 +104,38 @@ def test_multipolygon_with_one_overlapping_part():
         ],
     }
     assert alert_polygon_overlaps_tulsa(geometry) is True
+
+
+def test_tulsa_metro_counties_includes_known_counties():
+    expected = {"Tulsa", "Rogers", "Wagoner", "Creek", "Osage",
+                "Mayes", "Okmulgee", "Pawnee", "Washington", "Nowata"}
+    assert expected.issubset(TULSA_METRO_COUNTIES)
+
+
+def test_areadesc_with_tulsa_returns_true():
+    assert areadesc_overlaps_tulsa("Tulsa, OK") is True
+
+
+def test_areadesc_with_multiple_counties_returns_true():
+    assert areadesc_overlaps_tulsa("Wagoner, OK; Mayes, OK") is True
+
+
+def test_areadesc_with_dallas_returns_false():
+    assert areadesc_overlaps_tulsa("Dallas, TX") is False
+
+
+def test_areadesc_empty_returns_false():
+    assert areadesc_overlaps_tulsa("") is False
+
+
+def test_areadesc_none_returns_false():
+    assert areadesc_overlaps_tulsa(None) is False
+
+
+def test_areadesc_case_insensitive():
+    assert areadesc_overlaps_tulsa("tulsa, ok") is True
+
+
+def test_areadesc_only_matches_whole_word():
+    """'Tulsahoma' (made up) should NOT match 'Tulsa'."""
+    assert areadesc_overlaps_tulsa("Tulsahoma County, OK") is False

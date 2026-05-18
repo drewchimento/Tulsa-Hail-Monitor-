@@ -6,6 +6,7 @@ checks whether NWS alert geometries overlap it.
 from __future__ import annotations
 
 import math
+import re
 from functools import lru_cache
 from typing import Any
 
@@ -54,3 +55,22 @@ def alert_polygon_overlaps_tulsa(geometry: dict[str, Any] | None) -> bool:
     if not isinstance(alert_shape, (Polygon, MultiPolygon)):
         return False
     return alert_shape.intersects(tulsa_circle())
+
+
+# Counties whose territory is within 50 miles of downtown Tulsa.
+# Used as a fallback when an alert has no geometry.
+TULSA_METRO_COUNTIES = frozenset({
+    "Tulsa", "Rogers", "Wagoner", "Creek", "Osage",
+    "Mayes", "Okmulgee", "Pawnee", "Washington", "Nowata",
+})
+
+# Match a county name as a standalone word (so "Tulsahoma" won't match "Tulsa").
+_COUNTY_WORD_RE = re.compile(r"\b([A-Za-z]+)\b")
+
+
+def areadesc_overlaps_tulsa(area_desc: str | None) -> bool:
+    """Return True if any Tulsa-metro county name appears in the area description."""
+    if not area_desc:
+        return False
+    words = {w.title() for w in _COUNTY_WORD_RE.findall(area_desc)}
+    return bool(words & TULSA_METRO_COUNTIES)
