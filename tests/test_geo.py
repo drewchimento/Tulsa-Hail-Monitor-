@@ -52,3 +52,70 @@ def test_tulsa_circle_radius_north_is_about_50mi():
     north_50mi = Point(TULSA_CENTER_LON, TULSA_CENTER_LAT + (50.0 / 69.0))
     # Should be just inside or on the boundary
     assert circle.distance(north_50mi) < 0.01  # within ~0.6 mi of the edge
+
+
+# ---------------------------------------------------------------------------
+# Task 3 — alert polygon overlap detection
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def fixture_loader():
+    import json
+    import pathlib
+
+    def _load(filename):
+        fixtures_dir = pathlib.Path(__file__).parent / "fixtures"
+        with open(fixtures_dir / filename) as f:
+            return json.load(f)
+
+    return _load
+
+
+def test_alert_polygon_over_tulsa_overlaps(fixture_loader):
+    alert = fixture_loader("alert_tulsa_hail.json")
+    assert alert_polygon_overlaps_tulsa(alert["geometry"]) is True
+
+
+def test_alert_polygon_over_dallas_does_not_overlap(fixture_loader):
+    alert = fixture_loader("alert_dallas_hail.json")
+    assert alert_polygon_overlaps_tulsa(alert["geometry"]) is False
+
+
+def test_alert_polygon_clipping_50mi_edge_overlaps():
+    """A polygon centered near Bartlesville should clip the 50-mi radius."""
+    geometry = {
+        "type": "Polygon",
+        "coordinates": [[
+            [-96.10, 36.70],
+            [-95.85, 36.70],
+            [-95.85, 36.80],
+            [-96.10, 36.80],
+            [-96.10, 36.70],
+        ]],
+    }
+    assert alert_polygon_overlaps_tulsa(geometry) is True
+
+
+def test_null_geometry_returns_false():
+    assert alert_polygon_overlaps_tulsa(None) is False
+
+
+def test_empty_dict_geometry_returns_false():
+    assert alert_polygon_overlaps_tulsa({}) is False
+
+
+def test_point_geometry_returns_false():
+    """Geometries that aren't polygons (e.g. Point) should not match."""
+    geometry = {"type": "Point", "coordinates": [-95.993, 36.154]}
+    assert alert_polygon_overlaps_tulsa(geometry) is False
+
+
+def test_multipolygon_with_one_overlapping_part():
+    geometry = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [[[-96.90, 32.65], [-96.65, 32.65], [-96.65, 32.85], [-96.90, 32.85], [-96.90, 32.65]]],
+            [[[-96.10, 36.10], [-95.85, 36.10], [-95.85, 36.25], [-96.10, 36.25], [-96.10, 36.10]]],
+        ],
+    }
+    assert alert_polygon_overlaps_tulsa(geometry) is True
