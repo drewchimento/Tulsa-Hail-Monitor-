@@ -54,23 +54,6 @@ def test_tulsa_circle_radius_north_is_about_50mi():
     assert circle.distance(north_50mi) < 0.01  # within ~0.6 mi of the edge
 
 
-# ---------------------------------------------------------------------------
-# Task 3 — alert polygon overlap detection
-# ---------------------------------------------------------------------------
-
-@pytest.fixture
-def fixture_loader():
-    import json
-    import pathlib
-
-    def _load(filename):
-        fixtures_dir = pathlib.Path(__file__).parent / "fixtures"
-        with open(fixtures_dir / filename) as f:
-            return json.load(f)
-
-    return _load
-
-
 def test_alert_polygon_over_tulsa_overlaps(fixture_loader):
     alert = fixture_loader("alert_tulsa_hail.json")
     assert alert_polygon_overlaps_tulsa(alert["geometry"]) is True
