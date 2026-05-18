@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from typing import Any
 
 import requests
@@ -56,3 +57,56 @@ def is_relevant_hail_alert(alert: dict[str, Any]) -> bool:
     if geometry:
         return alert_polygon_overlaps_tulsa(geometry)
     return areadesc_overlaps_tulsa(props.get("areaDesc"))
+
+
+# Numeric hail size: "1 inch", "1.5 inches", "2.00 inch"
+_NUMERIC_HAIL_RE = re.compile(
+    r"(\d+(?:\.\d+)?)\s*(inch(?:es)?)",
+    re.IGNORECASE,
+)
+
+# "one inch" / "two inch" word-number variant
+_WORD_NUMBER_HAIL_RE = re.compile(
+    r"\b(one|two|three|four|five)\s+inch(?:es)?\b",
+    re.IGNORECASE,
+)
+_WORD_TO_NUM = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5"}
+
+# Common descriptive sizes, ordered from largest to smallest so we don't
+# accidentally match "ping pong" inside a description that also mentions "golf ball".
+_DESCRIPTIVE_SIZES = [
+    "baseball",
+    "softball",
+    "tennis ball",
+    "golf ball",
+    "ping pong ball",
+    "half dollar",
+    "quarter",
+    "nickel",
+    "dime",
+    "pea",
+]
+
+
+def extract_hail_size(description: str | None) -> str:
+    """Return a human-readable hail size phrase, or 'size unknown'."""
+    if not description:
+        return "size unknown"
+    text = description
+
+    numeric = _NUMERIC_HAIL_RE.search(text)
+    if numeric:
+        number, unit = numeric.group(1), numeric.group(2).lower()
+        return f"{number} {unit}"
+
+    word_match = _WORD_NUMBER_HAIL_RE.search(text)
+    if word_match:
+        word = word_match.group(1).lower()
+        return f"{_WORD_TO_NUM[word]} inch"
+
+    lower = text.lower()
+    for size in _DESCRIPTIVE_SIZES:
+        if size in lower:
+            return f"{size} size"
+
+    return "size unknown"

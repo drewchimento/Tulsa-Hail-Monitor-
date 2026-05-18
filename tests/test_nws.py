@@ -164,3 +164,33 @@ def test_missing_properties_returns_false():
 
 def test_completely_empty_alert_returns_false():
     assert is_relevant_hail_alert({}) is False
+
+
+from nws import extract_hail_size
+
+
+@pytest.mark.parametrize("description,expected", [
+    ("quarter size hail (1.00 inch)", "1.00 inch"),
+    ("up to one inch hail", "1 inch"),
+    ("HAIL UP TO 1.5 INCHES", "1.5 inches"),
+    ("ping pong ball size hail", "ping pong ball size"),
+    ("golf ball sized hail", "golf ball size"),
+    ("baseball-sized hail and 80 mph winds", "baseball size"),
+    ("quarter-sized hail", "quarter size"),
+    ("half dollar size hail", "half dollar size"),
+    ("hail of 2 inches", "2 inches"),
+])
+def test_extract_hail_size_known_phrasings(description, expected):
+    assert extract_hail_size(description) == expected
+
+
+def test_extract_hail_size_no_match_returns_unknown():
+    assert extract_hail_size("severe thunderstorm with damaging winds") == "size unknown"
+
+
+def test_extract_hail_size_empty_string():
+    assert extract_hail_size("") == "size unknown"
+
+
+def test_extract_hail_size_none():
+    assert extract_hail_size(None) == "size unknown"
