@@ -1,0 +1,22 @@
+{
+  "id": "urn:oid:2.49.0.1.840.0.test.dallas.hail",
+  "type": "Feature",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[
+      [-96.90, 32.65],
+      [-96.65, 32.65],
+      [-96.65, 32.85],
+      [-96.90, 32.85],
+      [-96.90, 32.65]
+    ]]
+  },
+  "properties": {
+    "id": "urn:oid:2.49.0.1.840.0.test.dallas.hail",
+    "event": "Severe Thunderstorm Warning",
+    "headline": "Severe Thunderstorm Warning issued for Dallas County until 9 PM CDT",
+    "description": "Quarter-sized hail and 60 mph wind gusts.",
+    "areaDesc": "Dallas, TX",
+    "expires": "2026-05-18T21:00:00-06:00"
+  }
+}
