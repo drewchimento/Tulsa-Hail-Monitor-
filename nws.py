@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-import re
 from typing import Any
 
 import requests
@@ -50,8 +49,7 @@ def is_relevant_hail_alert(alert: dict[str, Any]) -> bool:
 
     if event not in RELEVANT_EVENT_TYPES:
         return False
-    # Match "hail" only when not preceded by "no " (handles "No hail expected.")
-    if not re.search(r"(?<!no )hail", description):
+    if "hail" not in description:
         return False
 
     geometry = alert.get("geometry")

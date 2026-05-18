@@ -12,7 +12,7 @@
     "id": "urn:oid:2.49.0.1.840.0.test.windonly",
     "event": "Severe Thunderstorm Warning",
     "headline": "Severe Thunderstorm Warning issued for Tulsa County",
-    "description": "60 mph wind gusts. No hail expected.",
+    "description": "60 mph wind gusts and frequent lightning.",
     "areaDesc": "Tulsa, OK",
     "expires": "2026-05-18T20:00:00-05:00"
   }
