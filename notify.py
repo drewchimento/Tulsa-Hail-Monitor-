@@ -69,24 +69,21 @@ def format_alert_email(alert: dict[str, Any]) -> tuple[str, str]:
 
 
 def send_email(
+    *,
     subject: str,
     body: str,
-    *,
-    to_addr: str,
-    from_addr: str,
-    smtp_user: str,
-    smtp_password: str,
+    sender: str,
+    recipient: str,
+    password: str,
 ) -> None:
-    """Send a plain-text email via Gmail SMTP (TLS)."""
+    """Send a plain-text email via Gmail SMTP. Raises on any failure."""
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = from_addr
-    msg["To"] = to_addr
+    msg["From"] = sender
+    msg["To"] = recipient
     msg.set_content(body)
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.ehlo()
-        server.starttls()
-        server.login(smtp_user, smtp_password)
-        server.send_message(msg)
-    log.info("Email sent to %s: %s", to_addr, subject)
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
+        smtp.starttls()
+        smtp.login(sender, password)
+        smtp.send_message(msg)

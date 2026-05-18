@@ -66,3 +66,79 @@ def test_format_subject_falls_back_when_expires_missing():
     }
     subject, _ = format_alert_email(alert)
     assert "Hail Alert" in subject
+
+
+def test_send_email_uses_smtp_gmail_587(monkeypatch):
+    captured = {}
+
+    class FakeSMTP:
+        def __init__(self, host, port):
+            captured["host"] = host
+            captured["port"] = port
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def starttls(self):
+            captured["starttls"] = True
+
+        def login(self, user, password):
+            captured["user"] = user
+            captured["password"] = password
+
+        def send_message(self, msg):
+            captured["msg"] = msg
+
+    monkeypatch.setattr("notify.smtplib.SMTP", FakeSMTP)
+
+    send_email(
+        subject="Hail Alert — test",
+        body="body text",
+        sender="drew@bytedreams.ai",
+        recipient="drew@bytedreams.ai",
+        password="abcd efgh ijkl mnop",
+    )
+
+    assert captured["host"] == "smtp.gmail.com"
+    assert captured["port"] == 587
+    assert captured["starttls"] is True
+    assert captured["user"] == "drew@bytedreams.ai"
+    assert captured["password"] == "abcd efgh ijkl mnop"
+    assert captured["msg"]["Subject"] == "Hail Alert — test"
+    assert captured["msg"]["From"] == "drew@bytedreams.ai"
+    assert captured["msg"]["To"] == "drew@bytedreams.ai"
+    assert captured["msg"].get_content().strip() == "body text"
+
+
+def test_send_email_raises_on_smtp_failure(monkeypatch):
+    import smtplib
+
+    class FailingSMTP:
+        def __init__(self, host, port):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        def starttls(self):
+            pass
+
+        def login(self, user, password):
+            raise smtplib.SMTPAuthenticationError(535, b"Auth failed")
+
+        def send_message(self, msg):
+            pass
+
+    monkeypatch.setattr("notify.smtplib.SMTP", FailingSMTP)
+    with pytest.raises(smtplib.SMTPAuthenticationError):
+        send_email(
+            subject="x", body="y",
+            sender="a@b.com", recipient="c@d.com",
+            password="bad",
+        )
