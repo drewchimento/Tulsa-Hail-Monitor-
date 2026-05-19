@@ -1,9 +1,11 @@
-"""Tests for notify.py — email formatting and SMTP send."""
-from unittest.mock import patch, MagicMock
+"""Tests for notify.py — email formatting and Resend HTTP send."""
+import json
 
 import pytest
+import requests
+import responses
 
-from notify import format_alert_email, send_email
+from notify import RESEND_API_URL, format_alert_email, send_email
 
 
 def test_format_subject_includes_event_and_expires(fixture_loader):
@@ -24,7 +26,7 @@ def test_format_body_includes_headline(fixture_loader):
 def test_format_body_includes_hail_size(fixture_loader):
     alert = fixture_loader("alert_tulsa_hail.json")
     _, body = format_alert_email(alert)
-    assert "1.00 inch" in body  # extracted from "quarter size hail (1.00 inch)"
+    assert "1.00 inch" in body
 
 
 def test_format_body_includes_areas(fixture_loader):
@@ -52,7 +54,6 @@ def test_format_body_handles_missing_fields_gracefully():
     }
     subject, body = format_alert_email(minimal)
     assert "Hail Alert" in subject
-    # Should not raise; should produce a sensible body
     assert "Severe Thunderstorm Warning" in body
 
 
@@ -68,77 +69,65 @@ def test_format_subject_falls_back_when_expires_missing():
     assert "Hail Alert" in subject
 
 
-def test_send_email_uses_smtp_gmail_587(monkeypatch):
-    captured = {}
-
-    class FakeSMTP:
-        def __init__(self, host, port):
-            captured["host"] = host
-            captured["port"] = port
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            return False
-
-        def starttls(self):
-            captured["starttls"] = True
-
-        def login(self, user, password):
-            captured["user"] = user
-            captured["password"] = password
-
-        def send_message(self, msg):
-            captured["msg"] = msg
-
-    monkeypatch.setattr("notify.smtplib.SMTP", FakeSMTP)
+@responses.activate
+def test_send_email_posts_to_resend_with_bearer_auth():
+    responses.add(
+        responses.POST,
+        RESEND_API_URL,
+        json={"id": "test-message-id"},
+        status=200,
+    )
 
     send_email(
         subject="Hail Alert — test",
         body="body text",
-        sender="drew@bytedreams.ai",
+        sender="onboarding@resend.dev",
         recipient="drew@bytedreams.ai",
-        password="abcd efgh ijkl mnop",
+        api_key="re_test_key_123",
     )
 
-    assert captured["host"] == "smtp.gmail.com"
-    assert captured["port"] == 587
-    assert captured["starttls"] is True
-    assert captured["user"] == "drew@bytedreams.ai"
-    assert captured["password"] == "abcd efgh ijkl mnop"
-    assert captured["msg"]["Subject"] == "Hail Alert — test"
-    assert captured["msg"]["From"] == "drew@bytedreams.ai"
-    assert captured["msg"]["To"] == "drew@bytedreams.ai"
-    assert captured["msg"].get_content().strip() == "body text"
+    assert len(responses.calls) == 1
+    request = responses.calls[0].request
+    assert request.headers["Authorization"] == "Bearer re_test_key_123"
+    assert request.headers["Content-Type"] == "application/json"
+    payload = json.loads(request.body)
+    assert payload["from"] == "onboarding@resend.dev"
+    assert payload["to"] == "drew@bytedreams.ai"
+    assert payload["subject"] == "Hail Alert — test"
+    assert payload["text"] == "body text"
 
 
-def test_send_email_raises_on_smtp_failure(monkeypatch):
-    import smtplib
+@responses.activate
+def test_send_email_raises_on_4xx_response():
+    responses.add(
+        responses.POST,
+        RESEND_API_URL,
+        json={"message": "Invalid API key", "name": "validation_error"},
+        status=401,
+    )
 
-    class FailingSMTP:
-        def __init__(self, host, port):
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, *args):
-            return False
-
-        def starttls(self):
-            pass
-
-        def login(self, user, password):
-            raise smtplib.SMTPAuthenticationError(535, b"Auth failed")
-
-        def send_message(self, msg):
-            pass
-
-    monkeypatch.setattr("notify.smtplib.SMTP", FailingSMTP)
-    with pytest.raises(smtplib.SMTPAuthenticationError):
+    with pytest.raises(requests.HTTPError):
         send_email(
             subject="x", body="y",
-            sender="a@b.com", recipient="c@d.com",
-            password="bad",
+            sender="onboarding@resend.dev",
+            recipient="drew@bytedreams.ai",
+            api_key="re_bad_key",
+        )
+
+
+@responses.activate
+def test_send_email_raises_on_5xx_response():
+    responses.add(
+        responses.POST,
+        RESEND_API_URL,
+        json={"message": "internal error"},
+        status=500,
+    )
+
+    with pytest.raises(requests.HTTPError):
+        send_email(
+            subject="x", body="y",
+            sender="onboarding@resend.dev",
+            recipient="drew@bytedreams.ai",
+            api_key="re_any_key",
         )

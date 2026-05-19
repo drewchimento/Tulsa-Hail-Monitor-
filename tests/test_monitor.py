@@ -11,9 +11,9 @@ from monitor import run_once, Config
 def cfg(tmp_path):
     return Config(
         state_file=tmp_path / "seen_alerts.json",
-        sender="drew@bytedreams.ai",
+        sender="onboarding@resend.dev",
         recipient="drew@bytedreams.ai",
-        password="test-password",
+        api_key="re_test_key",
         dry_run=False,
     )
 

@@ -1,19 +1,20 @@
-"""Email formatting and SMTP send for the Tulsa hail monitor."""
+"""Email formatting and HTTP send (via Resend) for the Tulsa hail monitor."""
 from __future__ import annotations
 
 import logging
-import smtplib
 from datetime import datetime
-from email.message import EmailMessage
 from typing import Any
 from zoneinfo import ZoneInfo
+
+import requests
 
 from nws import extract_hail_size
 
 log = logging.getLogger(__name__)
 
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+RESEND_API_URL = "https://api.resend.com/emails"
+RESEND_TIMEOUT_SECONDS = 30
+DEFAULT_SENDER = "onboarding@resend.dev"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 NWS_ALERT_URL_TEMPLATE = "https://alerts.weather.gov/cap/wwacapget.php?x={alert_id}"
 
@@ -74,16 +75,21 @@ def send_email(
     body: str,
     sender: str,
     recipient: str,
-    password: str,
+    api_key: str,
 ) -> None:
-    """Send a plain-text email via Gmail SMTP. Raises on any failure."""
-    msg = EmailMessage()
-    msg["Subject"] = subject
-    msg["From"] = sender
-    msg["To"] = recipient
-    msg.set_content(body)
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as smtp:
-        smtp.starttls()
-        smtp.login(sender, password)
-        smtp.send_message(msg)
+    """Send a plain-text email via the Resend HTTP API. Raises on any failure."""
+    response = requests.post(
+        RESEND_API_URL,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": sender,
+            "to": recipient,
+            "subject": subject,
+            "text": body,
+        },
+        timeout=RESEND_TIMEOUT_SECONDS,
+    )
+    response.raise_for_status()

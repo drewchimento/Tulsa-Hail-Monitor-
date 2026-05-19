@@ -2,7 +2,7 @@
 
 Fetches active NWS alerts for Oklahoma, filters for hail-bearing
 Severe Thunderstorm Warnings inside a 50-mile circle around downtown
-Tulsa, deduplicates against state, and emails new alerts.
+Tulsa, deduplicates against state, and emails new alerts via Resend.
 """
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ import argparse
 import logging
 import os
 import sys
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 from nws import fetch_alerts, is_relevant_hail_alert
-from notify import format_alert_email, send_email
+from notify import DEFAULT_SENDER, format_alert_email, send_email
 from state import load_seen, save_seen, mark_seen, prune_old
 
 log = logging.getLogger("hail-monitor")
@@ -27,7 +27,7 @@ class Config:
     state_file: Path
     sender: str
     recipient: str
-    password: str
+    api_key: str
     dry_run: bool = False
 
 
@@ -65,7 +65,7 @@ def run_once(cfg: Config) -> None:
                     body=body,
                     sender=cfg.sender,
                     recipient=cfg.recipient,
-                    password=cfg.password,
+                    api_key=cfg.api_key,
                 )
                 mark_seen(seen, alert_id)
                 log.info("Sent hail alert email for %s", alert_id)
@@ -79,12 +79,11 @@ def run_once(cfg: Config) -> None:
 
 
 def _config_from_env(dry_run: bool) -> Config:
-    sender = os.environ["SMTP_USER"]
     return Config(
         state_file=Path("seen_alerts.json"),
-        sender=sender,
+        sender=os.environ.get("RESEND_FROM_EMAIL", DEFAULT_SENDER),
         recipient=os.environ["ALERT_TO_EMAIL"],
-        password=os.environ["SMTP_APP_PASSWORD"],
+        api_key=os.environ["RESEND_API_KEY"],
         dry_run=dry_run,
     )
 
@@ -110,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
             body="If you got this, the Tulsa Hail Monitor is wired up correctly.\n",
             sender=cfg.sender,
             recipient=cfg.recipient,
-            password=cfg.password,
+            api_key=cfg.api_key,
         )
         log.info("Self-test email sent to %s", cfg.recipient)
         return 0

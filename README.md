@@ -11,7 +11,7 @@ Runs free on GitHub Actions cron every 10 minutes. Total monthly cost: $0.
 ```
 NWS API → filter for SVR-warning + "hail" + Tulsa 50-mi radius
         → dedupe against seen_alerts.json
-        → email new alerts via Gmail SMTP
+        → email new alerts via Resend HTTP API
 ```
 
 ## Local development
@@ -19,7 +19,7 @@ NWS API → filter for SVR-warning + "hail" + Tulsa 50-mi radius
 1. Create venv: `python -m venv .venv`
 2. Activate it: PowerShell `.venv\Scripts\Activate.ps1`, or Git Bash `source .venv/Scripts/activate`
 3. Install deps: `pip install -r requirements-dev.txt`
-4. Copy `.env.example` to `.env` and fill in your real Gmail App Password.
+4. Copy `.env.example` to `.env` and fill in your Resend API key.
 5. Run tests: `python -m pytest tests/ -v`
 6. Dry-run against live NWS: `python monitor.py --dry-run`
 7. Send a real self-test email: `python monitor.py --self-test`
@@ -27,24 +27,29 @@ NWS API → filter for SVR-warning + "hail" + Tulsa 50-mi radius
 ## Production deploy
 
 Runs on GitHub Actions. The workflow at `.github/workflows/hail-monitor.yml`
-triggers every 10 minutes and uses three repository secrets:
+triggers every 10 minutes and uses two repository secrets:
 
-- `SMTP_USER` = drew@bytedreams.ai
-- `SMTP_APP_PASSWORD` = 16-character Google App Password
+- `RESEND_API_KEY` = your Resend API key (starts with `re_...`)
 - `ALERT_TO_EMAIL` = drew@bytedreams.ai
 
-To regenerate the App Password (if compromised or expired):
+Optional third secret:
 
-1. https://myaccount.google.com/apppasswords
-2. Revoke "Tulsa Hail Monitor", create a new one
-3. Update the `SMTP_APP_PASSWORD` secret in GitHub Settings → Secrets and variables → Actions
+- `RESEND_FROM_EMAIL` = the From address. Defaults to `onboarding@resend.dev`
+  (Resend's shared sender, works on free tier with no domain verification).
+  Set this only after verifying `bytedreams.ai` on Resend.
+
+To rotate the API key (if compromised):
+
+1. https://resend.com/api-keys
+2. Revoke the current "Tulsa Hail Monitor" key, create a new one
+3. Update the `RESEND_API_KEY` secret in GitHub Settings → Secrets and variables → Actions
 
 ## Files
 
 - `monitor.py` — entry point, CLI, orchestration
 - `nws.py` — NWS API client + filter logic + hail size extraction
 - `geo.py` — 50-mile Tulsa polygon + geometry checks + county fallback
-- `notify.py` — email formatting + SMTP send
+- `notify.py` — email formatting + Resend HTTP send
 - `state.py` — seen_alerts.json persistence (load/save/prune)
 - `seen_alerts.json` — committed state of which alerts have already been emailed
 - `.github/workflows/hail-monitor.yml` — cron workflow
