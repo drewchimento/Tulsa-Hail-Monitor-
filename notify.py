@@ -92,4 +92,7 @@ def send_email(
         },
         timeout=RESEND_TIMEOUT_SECONDS,
     )
+    if not response.ok:
+        log.error("Resend rejected request (status=%s): %s",
+                  response.status_code, response.text)
     response.raise_for_status()

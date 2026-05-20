@@ -39,9 +39,11 @@ def test_run_once_emails_new_relevant_alerts(cfg, fixture_loader, monkeypatch):
 def test_run_once_skips_already_seen(cfg, fixture_loader, monkeypatch):
     tulsa = fixture_loader("alert_tulsa_hail.json")
 
-    # Pre-populate seen state
+    # Pre-populate seen state with a fresh timestamp so prune_old won't remove it
+    from datetime import datetime, timezone
     from state import save_seen
-    save_seen(cfg.state_file, {tulsa["properties"]["id"]: "2026-05-18T00:00:00+00:00"})
+    fresh_ts = datetime.now(timezone.utc).isoformat()
+    save_seen(cfg.state_file, {tulsa["properties"]["id"]: fresh_ts})
 
     monkeypatch.setattr("monitor.fetch_alerts", lambda: [tulsa])
     sent = []
