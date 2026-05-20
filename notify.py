@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 RESEND_API_URL = "https://api.resend.com/emails"
 RESEND_TIMEOUT_SECONDS = 30
-DEFAULT_SENDER = "onboarding@resend.dev"
+DEFAULT_SENDER = "alerts@bytedreams.ai"
 CENTRAL_TZ = ZoneInfo("America/Chicago")
 NWS_ALERT_URL_TEMPLATE = "https://alerts.weather.gov/cap/wwacapget.php?x={alert_id}"
 
