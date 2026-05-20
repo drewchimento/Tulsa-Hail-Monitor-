@@ -81,7 +81,7 @@ def run_once(cfg: Config) -> None:
 def _config_from_env(dry_run: bool) -> Config:
     return Config(
         state_file=Path("seen_alerts.json"),
-        sender=os.environ.get("RESEND_FROM_EMAIL", DEFAULT_SENDER),
+        sender=os.environ.get("RESEND_FROM_EMAIL") or DEFAULT_SENDER,
         recipient=os.environ["ALERT_TO_EMAIL"],
         api_key=os.environ["RESEND_API_KEY"],
         dry_run=dry_run,
